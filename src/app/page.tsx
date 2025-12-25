@@ -1,65 +1,156 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Prompt } from '@/types/prompt';
+import PromptSidebar from '@/components/PromptSidebar';
+import PromptDetail from '@/components/PromptDetail';
+import PromptForm from '@/components/PromptForm';
+import ChatPanel from '@/components/ChatPanel';
 
 export default function Home() {
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingData, setEditingData] = useState<{ title: string; content: string } | null>(null);
+
+  useEffect(() => {
+    fetchPrompts();
+  }, []);
+
+  const fetchPrompts = async () => {
+    try {
+      const response = await fetch('/api/prompts');
+      const data = await response.json();
+      setPrompts(data);
+    } catch (error) {
+      console.error('Failed to fetch prompts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreate = async (data: { title: string; content: string }) => {
+    try {
+      const response = await fetch('/api/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (response.ok) {
+        const newPrompt = await response.json();
+        await fetchPrompts();
+        setSelectedId(newPrompt.id);
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Failed to create prompt:', error);
+    }
+  };
+
+  const handleUpdate = async (data: { title: string; content: string }) => {
+    if (!selectedId) return;
+    try {
+      const response = await fetch(`/api/prompts/${selectedId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (response.ok) {
+        await fetchPrompts();
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Failed to update prompt:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedId) return;
+    if (!confirm('确定要删除这个提示词吗？')) return;
+    try {
+      const response = await fetch(`/api/prompts/${selectedId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        await fetchPrompts();
+        setSelectedId(undefined);
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Failed to delete prompt:', error);
+    }
+  };
+
+  const handleSelect = (id: string) => {
+    setSelectedId(id);
+    setIsEditing(false);
+  };
+
+  const handleNew = () => {
+    setSelectedId(undefined);
+    setIsEditing(true);
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (!selectedId && prompts.length > 0) {
+        // If we were creating a new one and cancelled, maybe select the first one or nothing?
+        // Keeping it undefined is fine.
+    }
+  };
+
+  const selectedPrompt = prompts.find(p => p.id === selectedId);
+  const systemPrompt = isEditing ? (editingData?.content || '') : (selectedPrompt?.content || '');
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="flex h-screen bg-gray-100 overflow-hidden">
+      <PromptSidebar
+        prompts={prompts}
+        selectedId={selectedId}
+        onSelect={handleSelect}
+        onNew={handleNew}
+      />
+      
+      <div className="flex-1 flex flex-col h-full overflow-hidden border-r border-gray-200">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            加载中...
+          </div>
+        ) : isEditing ? (
+          <PromptForm
+            initialData={selectedPrompt}
+            onSubmit={selectedId ? handleUpdate : handleCreate}
+            onCancel={handleCancel}
+            isEditing={!!selectedId}
+            onChange={setEditingData}
+          />
+        ) : selectedPrompt ? (
+          <PromptDetail
+            prompt={selectedPrompt}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400 bg-gray-50/30">
+            <div className="text-center max-w-sm mx-auto p-8">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 inline-block mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-indigo-500">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">准备好开始了吗？</h3>
+              <p className="text-gray-500">从左侧列表选择一个提示词查看详情，或者点击“新建”按钮创建新的提示词。</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ChatPanel systemPrompt={systemPrompt} />
+    </main>
   );
 }

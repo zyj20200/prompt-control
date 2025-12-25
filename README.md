@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Prompt Control
 
-## Getting Started
+这是一个基于 Next.js 和 TypeScript 开发的提示词管理服务。
 
-First, run the development server:
+## 功能
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **新增提示词**：创建新的提示词，包含标题和内容。
+- **查看提示词**：在主页查看所有提示词列表。
+- **编辑提示词**：修改现有的提示词。
+- **删除提示词**：删除不再需要的提示词。
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 技术栈
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **框架**: [Next.js](https://nextjs.org/) (App Router)
+- **语言**: [TypeScript](https://www.typescriptlang.org/)
+- **样式**: [Tailwind CSS](https://tailwindcss.com/)
+- **数据存储**: 本地 JSON 文件 (`data/prompts.json`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 快速开始
 
-## Learn More
+1.  安装依赖：
 
-To learn more about Next.js, take a look at the following resources:
+    ```bash
+    npm install
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2.  启动开发服务器：
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    ```bash
+    npm run dev
+    ```
 
-## Deploy on Vercel
+3.  打开浏览器访问 [http://localhost:5000](http://localhost:5000)。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 项目结构
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/page.tsx`: 主页面，包含提示词列表和管理逻辑。
+- `src/app/api/prompts`: API 路由，处理 CRUD 操作。
+- `src/components`: React 组件 (`PromptList`, `PromptForm`)。
+- `src/lib/db.ts`: 数据存储逻辑。
+- `src/types`: TypeScript 类型定义。
+- `data/prompts.json`: 存储提示词数据的文件（自动生成）。
