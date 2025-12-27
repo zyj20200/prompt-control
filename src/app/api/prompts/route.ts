@@ -15,7 +15,11 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const newPrompt = addPrompt({ title: body.title, content: body.content });
+    const newPrompt = addPrompt({ 
+      title: body.title, 
+      content: body.content,
+      folderId: body.folderId 
+    });
     return NextResponse.json(newPrompt, { status: 201 });
   } catch (error) {
     return NextResponse.json(

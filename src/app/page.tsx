@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Prompt } from '@/types/prompt';
+import { Prompt, Folder } from '@/types/prompt';
 import PromptSidebar from '@/components/PromptSidebar';
 import PromptDetail from '@/components/PromptDetail';
 import PromptForm from '@/components/PromptForm';
@@ -9,28 +9,34 @@ import ChatPanel from '@/components/ChatPanel';
 
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingData, setEditingData] = useState<{ title: string; content: string } | null>(null);
+  const [editingData, setEditingData] = useState<{ title: string; content: string; folderId?: string } | null>(null);
 
   useEffect(() => {
-    fetchPrompts();
+    fetchData();
   }, []);
 
-  const fetchPrompts = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch('/api/prompts');
-      const data = await response.json();
-      setPrompts(data);
+      const [promptsRes, foldersRes] = await Promise.all([
+        fetch('/api/prompts'),
+        fetch('/api/folders')
+      ]);
+      const promptsData = await promptsRes.json();
+      const foldersData = await foldersRes.json();
+      setPrompts(promptsData);
+      setFolders(foldersData);
     } catch (error) {
-      console.error('Failed to fetch prompts:', error);
+      console.error('Failed to fetch data:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCreate = async (data: { title: string; content: string }) => {
+  const handleCreate = async (data: { title: string; content: string; folderId?: string }) => {
     try {
       const response = await fetch('/api/prompts', {
         method: 'POST',
@@ -39,7 +45,7 @@ export default function Home() {
       });
       if (response.ok) {
         const newPrompt = await response.json();
-        await fetchPrompts();
+        await fetchData();
         setSelectedId(newPrompt.id);
         setIsEditing(false);
       }
@@ -48,7 +54,7 @@ export default function Home() {
     }
   };
 
-  const handleUpdate = async (data: { title: string; content: string }) => {
+  const handleUpdate = async (data: { title: string; content: string; folderId?: string }) => {
     if (!selectedId) return;
     try {
       const response = await fetch(`/api/prompts/${selectedId}`, {
@@ -57,7 +63,7 @@ export default function Home() {
         body: JSON.stringify(data),
       });
       if (response.ok) {
-        await fetchPrompts();
+        await fetchData();
         setIsEditing(false);
       }
     } catch (error) {
@@ -73,12 +79,73 @@ export default function Home() {
         method: 'DELETE',
       });
       if (response.ok) {
-        await fetchPrompts();
+        await fetchData();
         setSelectedId(undefined);
         setIsEditing(false);
       }
     } catch (error) {
       console.error('Failed to delete prompt:', error);
+    }
+  };
+
+  const handleCreateFolder = async (name: string) => {
+    try {
+      const response = await fetch('/api/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (response.ok) {
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+    }
+  };
+
+  const handleRenameFolder = async (id: string, name: string) => {
+    try {
+      const response = await fetch(`/api/folders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (response.ok) {
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to rename folder:', error);
+    }
+  };
+
+  const handleDeleteFolder = async (id: string) => {
+    try {
+      const response = await fetch(`/api/folders/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+    }
+  };
+
+  const handleMovePrompt = async (promptId: string, folderId: string | undefined) => {
+    try {
+      const prompt = prompts.find(p => p.id === promptId);
+      if (!prompt) return;
+
+      const response = await fetch(`/api/prompts/${promptId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...prompt, folderId }),
+      });
+      if (response.ok) {
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to move prompt:', error);
     }
   };
 
@@ -111,9 +178,14 @@ export default function Home() {
     <main className="flex h-screen bg-gray-100 overflow-hidden">
       <PromptSidebar
         prompts={prompts}
+        folders={folders}
         selectedId={selectedId}
         onSelect={handleSelect}
         onNew={handleNew}
+        onCreateFolder={handleCreateFolder}
+        onDeleteFolder={handleDeleteFolder}
+        onRenameFolder={handleRenameFolder}
+        onMovePrompt={handleMovePrompt}
       />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden border-r border-gray-200">
@@ -124,6 +196,7 @@ export default function Home() {
         ) : isEditing ? (
           <PromptForm
             initialData={selectedPrompt}
+            folders={folders}
             onSubmit={selectedId ? handleUpdate : handleCreate}
             onCancel={handleCancel}
             isEditing={!!selectedId}
@@ -154,3 +227,4 @@ export default function Home() {
     </main>
   );
 }
+
